@@ -1,26 +1,67 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
+import axios from "axios";
+import PokemonCollection from "./components/PokemonCollection";
+import { Pokemon } from "./interface";
 
-function App() {
+interface Pokemons {
+  name: string;
+  url: string;
+}
+
+export interface viewDetail {
+  id: number; 
+  isSelected : boolean;
+}
+
+const App: React.FC = () => {
+  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+  const [nextUrl, setNextUrl] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [viewDetail, setViewDetail] = useState<viewDetail>({
+    id : 0,
+    isSelected : false
+  })
+  useEffect(() => {
+    const getPokemon = async () => {
+      const res = await axios.get(
+        "https://pokeapi.co/api/v2/pokemon?limit=20&offset=20"
+      );
+      setNextUrl(res.data.next);
+      res.data.results.forEach(async (pokemon: Pokemons) => {
+        const poke = await axios.get(
+          `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`
+        );
+        setPokemons((p) => [...p, poke.data]);
+        setIsLoading(false);
+      });
+    };
+    getPokemon();
+  }, []);
+
+  const handleNext = async () => {
+    setIsLoading(true);
+    const res = await axios.get(nextUrl);
+    setNextUrl(res.data.next);
+    res.data.results.forEach(async (pokemon: Pokemons) => {
+      const poke = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`
+      );
+      setPokemons((p) => [...p, poke.data]);
+      setIsLoading(false);
+    });
+  };
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div className="container">
+        <header className="pokemon-header">Pokemon</header>
+        <PokemonCollection pokemons={pokemons} viewDetail = {viewDetail} setViewDetail={setViewDetail} />
+      </div>
+      <div className="btn">
+        <button onClick={handleNext}>{isLoading ? "Loading..." : "Load More"}</button>
+      </div>
     </div>
   );
-}
+};
 
 export default App;
